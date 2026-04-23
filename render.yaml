@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: my-wa-bot
+    runtime: node
+    buildCommand: npm install --ignore-scripts && npx puppeteer browsers install chrome
+    startCommand: node index.js
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/.cache/puppeteer
