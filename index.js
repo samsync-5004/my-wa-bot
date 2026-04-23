@@ -3,8 +3,7 @@ const qrcode = require("qrcode-terminal");
 const { Groq } = require("groq-sdk");
 const fs = require("fs");
 
-const groq = new Groq({ apiKey: "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" });
-
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 // Load or create memory file
 const MEMORY_FILE = "memory.json";
 let memory = {};
@@ -56,7 +55,6 @@ const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
     headless: true,
-    executablePath: "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
   },
   webVersion: "2.2412.54",
@@ -65,7 +63,6 @@ const client = new Client({
     remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html"
   }
 });
-
 client.on("qr", (qr) => {
   console.log("📱 Scan QR:");
   qrcode.generate(qr, { small: true });
