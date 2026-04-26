@@ -1,9 +1,11 @@
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs");
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const geminiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const OpenAI = require("openai");
+const openrouter = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
 
 // ============ DATA MANAGEMENT ============
 const MEMORY_FILE = "memory.json";
@@ -82,10 +84,14 @@ function getRequiredLevel(command) {
 
 async function askAria(prompt) {
   try {
-    const result = await geminiModel.generateContent(prompt);
-    return result.response.text().trim();
+    const response = await openrouter.chat.completions.create({
+      model: "mistralai/mistral-7b-instruct:free",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 300
+    });
+    return response.choices[0].message.content.trim();
   } catch (err) {
-    console.error("Gemini error:", err.message);
+    console.error("OpenRouter error:", err.message);
     return "Hmm, I couldn't process that right now. Try again! 😅";
   }
 }
@@ -134,14 +140,14 @@ client.on("disconnected", (reason) => {
 // ============ MAIN MESSAGE HANDLER ============
 client.on("message", async (msg) => {
   // Debug log
-  console.log(`[${msg.from}] ${msg.fromMe ? "ME" : "THEM"}: ${msg.body}`);
+
 
   // Filters
   if (msg.from === "status@broadcast") return;
   if (msg.from.includes("@newsletter")) return;
   if (msg.from.includes("@broadcast")) return;
   if (msg.isStatus) return;
-  if (msg.fromMe) return;
+  if (msg.fromMe && !msg.from.includes("@g.us")) return;
   if (!msg.body || msg.body.trim() === "") return;
   if (msg.type === "ptt" || msg.type === "audio") return;
 
@@ -752,8 +758,15 @@ Answer: [answer here]`);
         `${m.role === "user" ? "User" : "Aria"}: ${m.content}`
       ).join("\n");
       const fullPrompt = `${DM_SYSTEM_PROMPT}\n\nConversation:\n${history}\n\nAria:`;
-      const result = await geminiModel.generateContent(fullPrompt);
-      const reply = result.response.text().trim();
+     const response = await openrouter.chat.completions.create({
+  model: "mistralai/mistral-7b-instruct:free",
+  messages: [
+    { role: "system", content: DM_SYSTEM_PROMPT },
+    ...memory.dmHistory[contactId]
+  ],
+  max_tokens: 300
+});
+const reply = response.choices[0].message.content.trim();
       memory.dmHistory[contactId].push({ role: "assistant", content: reply });
       saveMemory();
       await msg.reply(reply);
